@@ -7,6 +7,7 @@ from urllib3.exceptions import MaxRetryError
 from requests.exceptions import ProxyError
 from json.decoder import JSONDecodeError
 from discord_webhook import DiscordEmbed, DiscordWebhook
+from patient_info import Patient, Questions
 
 s = requests.Session()
 
@@ -50,7 +51,7 @@ proxy = ''  # 166.122.33.44:55555:axvacl:lewbbf
 
 vaccine_controls = ["PFIZER1", "PFIZER"]
 
-radius = 50
+radius = input("Radius: ")
 
 discord_webhook_url = ''
 
@@ -69,90 +70,45 @@ class set_proxy:
 home = input("Please enter your CVS location: ")
 
 
-class patient_info:
-    first_name = 'Jane'
-    last_name = 'Doe'
-    dob = '1980-03-09'  # ex. 2000-07-08
-    gender = ''  # M or F
-    email = 'janedoe@gmail.com'
-    phone = '1231231234'  # ex. 6178626406
-    address_1 = 'Jane Doe Road'
-    address_2 = None
-    city = 'Doe'
-    state = 'MA'  # ex. MA
-    zip_code = '12345'
-    race = 'White'
-    race_value = '2106-3'
-    ethnicity = 'Not Hispanic or Latino or Spanish Origin'
-    ethnicity_value = 'N'
-    insurance_id = ''
-    non_medicare = True
-
-
 # patient questions values --> 1: Yes, 2: No, 3: I don't know
 # (experimental) currently only works for "America/New_York" time zone
 # ethnicity value --> U: Unknown, N: Not Hispanic..., Y: Is Hispanic...
 
 
-class patient_questions:
-    question_id_1 = "I don't know"
-    question_id_2 = 'No'
-    question_id_3 = 'No'
-    question_id_4 = 'No'
-    question_id_5 = 'No'
-    question_id_6 = 'No'
-    question_id_7 = 'No'
-    question_id_8 = 'No'
-    question_id_9 = 'No'
-    question_id_10 = 'No'
-    question_id_11 = 'No'
-    question_id_12 = 'No'
-    question_id_13 = 'No'
-    eligibility = "Age 16+ with high-risk conditions"  # Can be custom. Doesn't need to be preset.
+def question_values(question_id):
+    if question_id == "No":
+        return 2
+    if question_id == "Yes":
+        return 1
+    if question_id == "I don't know":
+        return 3
 
 
-class patient_question_values:
-    question_id_1 = 3
-    question_id_2 = 2
-    question_id_3 = 2
-    question_id_4 = 2
-    question_id_5 = 2
-    question_id_6 = 2
-    question_id_7 = 2
-    question_id_8 = 2
-    question_id_9 = 2
-    question_id_10 = 2
-    question_id_11 = 2
-    question_id_12 = 2
-    question_id_13 = 2
-    eligibility = '1'  # Keep 1 for true
-
-
-if patient_info.non_medicare:
+if Patient().non_medicare:
     insurance_data = {
         "typeId": 6,
         "typeText": "Insurance",
         "insuranceData": [
             {
-                "cardHolderFirstName": patient_info.first_name,
-                "cardHolderLastName": patient_info.last_name,
+                "cardHolderFirstName": Patient().first_name,
+                "cardHolderLastName": Patient().last_name,
                 "groupId": None,
                 "insuranceType": "secondary",
                 "isPatientPrimaryCardholder": "Y",
-                "memberId": patient_info.insurance_id,
-                "provider": "Jane Doe's Insurance",
+                "memberId": Patient().insurance_id,
+                "provider": Patient().non_medicare_provider,
                 "relationshipWithCardHolder": "1",
                 "payerId": None
             }
         ]
     }
 
-if not patient_info.non_medicare:
+if not Patient().non_medicare:
     insurance_data = {
         "typeId": 5,
         "typeText": "Medicare",
         "medicareData": {
-            "memberId": patient_info.insurance_id
+            "memberId": Patient().insurance_id
         },
         "insuranceData": [
 
@@ -319,7 +275,7 @@ def covid_monitor():
                     # [First Dose] Geo Code Submitting
 
                     getIMZStores = s.post(monitor.url, json=geo_form_data, headers=monitor.headers,
-                                          proxies=set_proxy.proxies)
+                                          )
 
                     if getIMZStores.json()["responseMetaData"]["statusDesc"] == "No stores with immunizations found":
                         monitor_loop_status(IMZRetry)
@@ -397,7 +353,7 @@ def covid_monitor():
                     }
 
                 first_dose_SA = s.post(first_dose_soft.url, json=first_dose_soft.form_data,
-                                       headers=first_dose_soft.fd_headers, proxies=set_proxy.proxies)
+                                       headers=first_dose_soft.fd_headers, )
 
                 class first_dose:
                     # General Variables
@@ -414,6 +370,7 @@ def covid_monitor():
                         print(utc2est(), site_print,
                               colors.CYAN + "Reserving a PFIZER appointment..." + colors.END)
                         ndc = ["59267100002", "59267100003"]
+                        __vaccine__ = 'PFIZER'
 
                     elif ndc == "59676058015":
                         print(utc2est(), site_print,
@@ -457,7 +414,7 @@ def covid_monitor():
                     }
 
                     first_dose_R = s.post(reserve_url, json=fd_reserve_form_data, headers=api_headers,
-                                          proxies=set_proxy.proxies)
+                                          )
 
                     class first_dose_reserve:
                         reservation_code = first_dose_R.json()["details"]["reservationCode"]
@@ -530,7 +487,7 @@ def covid_monitor():
 
                     second_dose_GIS = s.post(monitor.url, json=sd_monitor_form_data,
                                              headers=sd_monitor_headers,
-                                             proxies=set_proxy.proxies)
+                                             )
 
                     if geo_code_get.status_code != 200:
                         print(utc2est(), site_print,
@@ -593,7 +550,7 @@ def covid_monitor():
 
                         second_dose_SA = s.post(first_dose_soft.url, json=sd_allocation_form_data,
                                                 headers=first_dose_soft.fd_headers,
-                                                proxies=set_proxy.proxies)
+                                                )
 
                         class second_dose_soft:
                             allocation_date = second_dose_SA.json()["responsePayloadData"]["data"][
@@ -609,7 +566,7 @@ def covid_monitor():
                         }
 
                         second_dose_AT = s.get(time_url, params=sd_time_form_params, headers=api_headers,
-                                               proxies=set_proxy.proxies)
+                                               )
 
                         class second_dose_times:
                             time_slots = second_dose_AT.json()["details"][0]["timeSlots"][0]
@@ -625,7 +582,7 @@ def covid_monitor():
                         }
 
                         second_dose_R = s.post(reserve_url, json=sd_reserve_form_data, headers=api_headers,
-                                               proxies=set_proxy.proxies)
+                                               )
 
                         class second_dose_reserve:
                             status_desc = second_dose_R.json()["header"]["statusDescription"]
@@ -688,26 +645,26 @@ def covid_monitor():
                                         "patientId": "",
                                         "encryptionType": "",
                                         "patientData": {
-                                            "firstName": patient_info.first_name,
-                                            "lastName": patient_info.last_name,
-                                            "DOB": patient_info.dob,
-                                            "gender": patient_info.gender,
-                                            "emailId": patient_info.email,
-                                            "phoneNumber": patient_info.phone,
+                                            "firstName": Patient().first_name,
+                                            "lastName": Patient().last_name,
+                                            "DOB": Patient().dob,
+                                            "gender": Patient().gender,
+                                            "emailId": Patient().email,
+                                            "phoneNumber": Patient().phone,
                                             "address": {
-                                                "addressLine1": patient_info.address_1,
-                                                "addressLine2": patient_info.address_2,
-                                                "city": patient_info.city,
-                                                "state": patient_info.state,
-                                                "zip": patient_info.zip_code
+                                                "addressLine1": Patient().address_1,
+                                                "addressLine2": Patient().address_2,
+                                                "city": Patient().city,
+                                                "state": Patient().state,
+                                                "zip": Patient().zip_code
                                             }
                                         },
                                         "immunizationAnswers": [
                                             {
                                                 "questionId": "2",
                                                 "questionText": "Have you ever had a severe allergic reaction (e.g., anaphylaxis) to something? For example, a reaction for which you were treated with epinephrine, or EpiPen, or for which you had to go to the hospital? If yes, what are you allergic to?",
-                                                "answerValue": patient_question_values.question_id_2,
-                                                "answerText": patient_questions.question_id_2,
+                                                "answerValue": question_values(Questions().question_id_2),
+                                                "answerText": Questions().question_id_2,
                                                 "answerFreeText": "",
                                                 "imzTypeCode": [
                                                     {
@@ -719,8 +676,8 @@ def covid_monitor():
                                             {
                                                 "questionId": "3",
                                                 "questionText": "Had you ever had a severe allergic reaction after receiving a COVID-19 vaccine?",
-                                                "answerValue": patient_question_values.question_id_3,
-                                                "answerText": patient_questions.question_id_3,
+                                                "answerValue": question_values(Questions().question_id_3),
+                                                "answerText": Questions().question_id_3,
                                                 "answerFreeText": "",
                                                 "imzTypeCode": [
                                                     {
@@ -732,8 +689,8 @@ def covid_monitor():
                                             {
                                                 "questionId": "4",
                                                 "questionText": "Have you ever had a severe allergic reaction after receiving another vaccine or injectable medication?",
-                                                "answerValue": patient_question_values.question_id_4,
-                                                "answerText": patient_questions.question_id_4,
+                                                "answerValue": question_values(Questions().question_id_4),
+                                                "answerText": Questions().question_id_4,
                                                 "answerFreeText": "",
                                                 "imzTypeCode": [
                                                     {
@@ -745,8 +702,8 @@ def covid_monitor():
                                             {
                                                 "questionId": "5",
                                                 "questionText": "Have you ever had a severe allergic reaction after receiving Polyethylene Glycol?",
-                                                "answerValue": patient_question_values.question_id_5,
-                                                "answerText": patient_questions.question_id_5,
+                                                "answerValue": question_values(Questions().question_id_5),
+                                                "answerText": Questions().question_id_5,
                                                 "answerFreeText": "",
                                                 "imzTypeCode": [
                                                     {
@@ -758,8 +715,8 @@ def covid_monitor():
                                             {
                                                 "questionId": "6",
                                                 "questionText": "Have you ever had a severe allergic reaction related to receiving Polysorbate or products containing Polysorbate?",
-                                                "answerValue": patient_question_values.question_id_6,
-                                                "answerText": patient_questions.question_id_6,
+                                                "answerValue": question_values(Questions().question_id_6),
+                                                "answerText": Questions().question_id_6,
                                                 "answerFreeText": "",
                                                 "imzTypeCode": [
                                                     {
@@ -771,8 +728,8 @@ def covid_monitor():
                                             {
                                                 "questionId": "7",
                                                 "questionText": "For women, are you currently pregnant or breastfeeding?",
-                                                "answerValue": patient_question_values.question_id_7,
-                                                "answerText": patient_questions.question_id_7,
+                                                "answerValue": question_values(Questions().question_id_7),
+                                                "answerText": Questions().question_id_7,
                                                 "answerFreeText": "",
                                                 "imzTypeCode": [
                                                     {
@@ -784,8 +741,8 @@ def covid_monitor():
                                             {
                                                 "questionId": "11",
                                                 "questionText": "Do you have a bleeding disorder or are you taking a blood thinner?",
-                                                "answerValue": patient_question_values.question_id_11,
-                                                "answerText": patient_questions.question_id_11,
+                                                "answerValue": question_values(Questions().question_id_11),
+                                                "answerText": Questions().question_id_11,
                                                 "answerFreeText": "",
                                                 "imzTypeCode": [
                                                     {
@@ -797,8 +754,8 @@ def covid_monitor():
                                             {
                                                 "questionId": "12",
                                                 "questionText": "Have you received any vaccines in the past 14 days?",
-                                                "answerValue": patient_question_values.question_id_12,
-                                                "answerText": patient_questions.question_id_12,
+                                                "answerValue": question_values(Questions().question_id_12),
+                                                "answerText": Questions().question_id_12,
                                                 "answerFreeText": "",
                                                 "imzTypeCode": [
                                                     {
@@ -810,8 +767,8 @@ def covid_monitor():
                                             {
                                                 "questionId": "13",
                                                 "questionText": "Have you received monoclonal antibodies or convalescent plasma as part of a COVID-19 treatment in the past 90 days?",
-                                                "answerValue": patient_question_values.question_id_13,
-                                                "answerText": patient_questions.question_id_13,
+                                                "answerValue": question_values(Questions().question_id_13),
+                                                "answerText": Questions().question_id_13,
                                                 "answerFreeText": "",
                                                 "imzTypeCode": [
                                                     {
@@ -833,8 +790,8 @@ def covid_monitor():
                                                             "refId": "55402"
                                                         }
                                                     ],
-                                                    "answerText": patient_questions.question_id_1,
-                                                    "answerValue": patient_question_values.question_id_1
+                                                    "answerText": Questions().question_id_1,
+                                                    "answerValue": question_values(Questions().question_id_1)
                                                 },
                                                 {
                                                     "questionId": "8",
@@ -846,8 +803,8 @@ def covid_monitor():
                                                             "refId": "55416"
                                                         }
                                                     ],
-                                                    "answerText": patient_questions.question_id_8,
-                                                    "answerValue": patient_question_values.question_id_8
+                                                    "answerText": Questions().question_id_8,
+                                                    "answerValue": question_values(Questions().question_id_8)
                                                 },
                                                 {
                                                     "questionId": "9",
@@ -859,8 +816,8 @@ def covid_monitor():
                                                             "refId": "55418"
                                                         }
                                                     ],
-                                                    "answerText": patient_questions.question_id_9,
-                                                    "answerValue": patient_question_values.question_id_9
+                                                    "answerText": Questions().question_id_9,
+                                                    "answerValue": question_values(Questions().question_id_9)
                                                 },
                                                 {
                                                     "questionId": "10",
@@ -872,8 +829,9 @@ def covid_monitor():
                                                             "refId": "55420"
                                                         }
                                                     ],
-                                                    "answerText": patient_questions.question_id_10,
-                                                    "answerValue": patient_question_values.question_id_10
+                                                    "answerText": Questions().question_id_10,
+                                                    "answerValue": question_values(Questions().question_id_10)
+
                                                 }
                                             ]
                                         },
@@ -882,9 +840,9 @@ def covid_monitor():
                                             {
                                                 "questionId": "2",
                                                 "questionText": "Which group applies?",
-                                                "answerText": patient_questions.eligibility,
-                                                "answerFreeText": patient_questions.eligibility,
-                                                "answerValue": patient_question_values.eligibility,
+                                                "answerText": Questions().eligibility,
+                                                "answerFreeText": Questions().eligibility,
+                                                "answerValue": "1",
                                                 "imzTypeCode": [
                                                     {
                                                         "code": "CVD",
@@ -938,13 +896,13 @@ def covid_monitor():
                                         "additionalLegalAnswers": [
                                             {
                                                 "questionId": "race",
-                                                "answerValue": patient_info.race_value,
-                                                "answerText": patient_info.race
+                                                "answerValue": Patient().race_value,
+                                                "answerText": Patient().race
                                             },
                                             {
                                                 "questionId": "ethnicity",
-                                                "answerValue": patient_info.ethnicity_value,
-                                                "answerText": patient_info.ethnicity
+                                                "answerValue": Patient().ethnicity_value,
+                                                "answerText": Patient().ethnicity
                                             }
                                         ],
                                         "isGuest": "Y",
@@ -964,7 +922,7 @@ def covid_monitor():
                             submit_registration_post = s.post(submit_registration.url,
                                                               json=submit_registration.PFIZER_form_data,
                                                               headers=submit_registration.headers,
-                                                              proxies=set_proxy.proxies)
+                                                              )
 
                             class submit_response:
                                 try:
