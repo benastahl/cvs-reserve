@@ -52,6 +52,8 @@ vaccine_controls = ["PFIZER1", "PFIZER"]
 
 radius = 50
 
+discord_webhook_url = ''
+
 
 class set_proxy:
     (IPv4, Port, username, password) = proxy.split(':')
@@ -988,7 +990,7 @@ def covid_monitor():
 
                                 def webhook():
                                     Webhook = DiscordWebhook(
-                                        url='https://discord.com/api/webhooks/813153762470133793/BwRte8_jEZc7pGq26KKA78S6r5QfMR_wF7HEBZUKgszFgCp8KyHR--aoZ-NK9cwvugP2')
+                                        url=discord_webhook_url)
 
                                     embed = DiscordEmbed(title="Appointment Successfully Scheduled at CVS",
                                                          url='https://www.cvs.com/immunizations/covid-19-vaccine',
