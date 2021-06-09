@@ -8,20 +8,9 @@ from requests.exceptions import ProxyError
 from json.decoder import JSONDecodeError
 from discord_webhook import DiscordEmbed, DiscordWebhook
 from patient_info import Patient, Questions
+from general_info import Colors, Discord_Webhook
 
 s = requests.Session()
-
-
-class colors:
-    HEADER = '\033[95m'
-    BLUE = '\033[94m'
-    CYAN = '\033[96m'
-    GREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    END = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
 
 
 def utc2est():
@@ -29,7 +18,7 @@ def utc2est():
     return str(current) + ' EST'
 
 
-site_print = colors.CYAN + "[VACCINE SEARCH]" + colors.END
+site_print = Colors.CYAN + "[VACCINE SEARCH]" + Colors.END
 
 today = date.today()
 
@@ -51,10 +40,6 @@ proxy = ''  # 166.122.33.44:55555:axvacl:lewbbf
 
 vaccine_controls = ["PFIZER1", "PFIZER"]
 
-radius = input("Radius: ")
-
-discord_webhook_url = ''
-
 
 class set_proxy:
     (IPv4, Port, username, password) = proxy.split(':')
@@ -68,6 +53,7 @@ class set_proxy:
 
 
 home = input("Please enter your CVS location: ")
+radius = input("Radius: ")
 
 
 # patient questions values --> 1: Yes, 2: No, 3: I don't know
@@ -123,14 +109,14 @@ vaccine_code_list = []
 for vaccine in vaccine_controls:
     vaccine_code_list.append(vaccine_codes[vaccine])
 if not vaccine_controls:
-    print(utc2est(), site_print, colors.FAIL + "Please enter in a vaccine(s).", colors.END)
+    print(utc2est(), site_print, Colors.FAIL + "Please enter in a vaccine(s).", Colors.END)
     exit(1)
 
 
 def startup_print(vaccine_selection, cvs_location):
-    print(utc2est(), site_print, colors.CYAN + "Monitor for CVS in", colors.WARNING + cvs_location,
-          colors.CYAN + "has begun..." + colors.END)
-    print(utc2est(), site_print, colors.CYAN + "Looking for:", str(vaccine_selection) + colors.END)
+    print(utc2est(), site_print, Colors.CYAN + "Monitor for CVS in", Colors.WARNING + cvs_location,
+          Colors.CYAN + "has begun..." + Colors.END)
+    print(utc2est(), site_print, Colors.CYAN + "Looking for:", str(vaccine_selection) + Colors.END)
 
 
 def covid_monitor():
@@ -142,15 +128,15 @@ def covid_monitor():
             def monitor_loop_status(loop):
                 if loop == 1:
                     print(utc2est(), site_print,
-                          colors.BOLD + "No appointments available at the location you selected. Monitoring for appointments..." + colors.END)
+                          Colors.BOLD + "No appointments available at the location you selected. Monitoring for appointments..." + Colors.END)
                 elif loop == 360:
-                    print(utc2est(), site_print, colors.BOLD + "Still searching for appointments..." + colors.END)
+                    print(utc2est(), site_print, Colors.BOLD + "Still searching for appointments..." + Colors.END)
                 elif loop == 540:
-                    print(utc2est(), site_print, colors.BOLD + "Still searching for appointments..." + colors.END)
+                    print(utc2est(), site_print, Colors.BOLD + "Still searching for appointments..." + Colors.END)
                 elif loop == 720:
-                    print(utc2est(), site_print, colors.BOLD + "Still searching for appointments..." + colors.END)
+                    print(utc2est(), site_print, Colors.BOLD + "Still searching for appointments..." + Colors.END)
                 elif loop == 900:
-                    print(utc2est(), site_print, colors.BOLD + "Still searching for appointments..." + colors.END)
+                    print(utc2est(), site_print, Colors.BOLD + "Still searching for appointments..." + Colors.END)
 
             time.sleep(10)
 
@@ -200,13 +186,13 @@ def covid_monitor():
 
             if geo_code_get.status_code != 200:
                 print(utc2est(), site_print,
-                      colors.FAIL + colors.BOLD + "Request UNSUCCESSFULLY Received by the API. STATUS CODE:",
-                      str(geo_code_get.status_code) + colors.END)
+                      Colors.FAIL + Colors.BOLD + "Request UNSUCCESSFULLY Received by the API. STATUS CODE:",
+                      str(geo_code_get.status_code) + Colors.END)
                 exit(1)
             if monitor_loop == 0:
                 if geo_code_get.status_code == 200:
                     print(utc2est(), site_print,
-                          colors.CYAN + colors.BOLD + "Request Successfully Received by the API." + colors.END)
+                          Colors.CYAN + Colors.BOLD + "Request Successfully Received by the API." + Colors.END)
 
             class geo_code:
                 status_desc = geo_code_get.json()["responseMetaData"]["statusDesc"]
@@ -215,16 +201,16 @@ def covid_monitor():
             unknown_error = re.findall('Inventory unavailable', geo_code.status_desc)
             if unknown_error:
                 print(utc2est(), site_print,
-                      colors.FAIL + colors.BOLD + "Something went wrong. Please contact the owner." + colors.END)
+                      Colors.FAIL + Colors.BOLD + "Something went wrong. Please contact the owner." + Colors.END)
                 print(utc2est(), site_print,
-                      colors.FAIL + colors.BOLD + "Description:", geo_code.status_desc + colors.END)
+                      Colors.FAIL + Colors.BOLD + "Description:", geo_code.status_desc + Colors.END)
                 print(utc2est(), site_print,
-                      colors.FAIL + colors.BOLD + "Status Code:", geo_code.status_code + colors.END)
+                      Colors.FAIL + Colors.BOLD + "Status Code:", geo_code.status_code + Colors.END)
                 exit(1)
 
             if geo_code.status_desc == 'Failed calling getStoreDetails -Locations Not Found':
                 print(utc2est(), site_print,
-                      colors.FAIL + colors.BOLD + "The location you typed in could not be located or might be in a format that is unrecognizable. Please type in a new location. (Ex. 'Wayland, MA', '01778')" + colors.END)
+                      Colors.FAIL + Colors.BOLD + "The location you typed in could not be located or might be in a format that is unrecognizable. Please type in a new location. (Ex. 'Wayland, MA', '01778')" + Colors.END)
                 exit(1)
 
             if geo_code.status_desc == "No stores with immunizations found":
@@ -282,8 +268,8 @@ def covid_monitor():
                         continue
 
                     if getIMZStores.json()["responseMetaData"]["statusDesc"] == "Success":
-                        print(utc2est(), site_print, colors.CYAN + "GEO LOCATION CODES FOUND:",
-                              colors.WARNING + longitude + ",", latitude + colors.END)
+                        print(utc2est(), site_print, Colors.CYAN + "GEO LOCATION CODES FOUND:",
+                              Colors.WARNING + longitude + ",", latitude + Colors.END)
 
                         # General Variables
                         location_json = getIMZStores.json()["responsePayloadData"]["locations"][0]
@@ -298,14 +284,14 @@ def covid_monitor():
 
                         store_address = address_line + " " + city + ", " + state + " " + zip_code
 
-                        print(utc2est(), site_print, colors.GREEN + "Appointment Time Slots have been found in",
-                              colors.WARNING + home + colors.END)
+                        print(utc2est(), site_print, Colors.GREEN + "Appointment Time Slots have been found in",
+                              Colors.WARNING + home + Colors.END)
 
-                        print(utc2est(), site_print, colors.CYAN + "Available vaccination dates:",
-                              colors.WARNING + str(available_dates) + colors.END)
+                        print(utc2est(), site_print, Colors.CYAN + "Available vaccination dates:",
+                              Colors.WARNING + str(available_dates) + Colors.END)
 
                         print(utc2est(), site_print,
-                              colors.CYAN + 'CVS Address: ' + colors.WARNING + store_address + colors.END)
+                              Colors.CYAN + 'CVS Address: ' + Colors.WARNING + store_address + Colors.END)
 
                         break
                     break
@@ -368,17 +354,17 @@ def covid_monitor():
                     # PFIZER NDC Code Adaptation
                     if ndc == "59267100002" or "59267100003":
                         print(utc2est(), site_print,
-                              colors.CYAN + "Reserving a PFIZER appointment..." + colors.END)
+                              Colors.CYAN + "Reserving a PFIZER appointment..." + Colors.END)
                         ndc = ["59267100002", "59267100003"]
                         __vaccine__ = 'PFIZER'
 
                     elif ndc == "59676058015":
                         print(utc2est(), site_print,
-                              colors.CYAN + "Reserving a JOHNSON & JOHNSON appointment..." + colors.END)
+                              Colors.CYAN + "Reserving a JOHNSON & JOHNSON appointment..." + Colors.END)
 
                     elif ndc == "80777027399":
                         print(utc2est(), site_print,
-                              colors.CYAN + "Reserving a MODERNA appointment..." + colors.END)
+                              Colors.CYAN + "Reserving a MODERNA appointment..." + Colors.END)
 
                 # [First Dose] Available Time Slots
 
@@ -391,8 +377,8 @@ def covid_monitor():
                 first_dose_AT = s.get(time_url, params=fd_time_form_params, headers=api_headers)
 
                 if first_dose_AT.json()["header"]["statusDescription"] == "No Available Timeslots Found for Reservation":
-                    print(utc2est(), site_print, colors.WARNING + 'No Available Time Slots for',
-                          first_dose.allocation_date + ". Trying another day..." + colors.END)
+                    print(utc2est(), site_print, Colors.WARNING + 'No Available Time Slots for',
+                          first_dose.allocation_date + ". Trying another day..." + Colors.END)
                     print(first_dose_AT.json())
                     continue
 
@@ -426,13 +412,13 @@ def covid_monitor():
                     if first_dose_reserve.status_desc == "Success":
                         print(utc2est(),
                               site_print,
-                              colors.GREEN + '[First Dose] Reserved Session Successfully ----------------' + colors.END)
-                        print(utc2est(), site_print, colors.CYAN + "Allocation Date:",
-                              colors.WARNING + first_dose.allocation_date + colors.END)
-                        print(utc2est(), site_print, colors.CYAN + "Allocation Time:",
-                              colors.WARNING + first_dose_times.time_slots + colors.END)
-                        print(utc2est(), site_print, colors.CYAN + "Visit Date and Time:",
-                              colors.WARNING + first_dose_reserve.visit_date_time + colors.END)
+                              Colors.GREEN + '[First Dose] Reserved Session Successfully ----------------' + Colors.END)
+                        print(utc2est(), site_print, Colors.CYAN + "Allocation Date:",
+                              Colors.WARNING + first_dose.allocation_date + Colors.END)
+                        print(utc2est(), site_print, Colors.CYAN + "Allocation Time:",
+                              Colors.WARNING + first_dose_times.time_slots + Colors.END)
+                        print(utc2est(), site_print, Colors.CYAN + "Visit Date and Time:",
+                              Colors.WARNING + first_dose_reserve.visit_date_time + Colors.END)
                         print('-----------------------------------------')
 
                     # SECOND DOSE
@@ -491,8 +477,8 @@ def covid_monitor():
 
                     if geo_code_get.status_code != 200:
                         print(utc2est(), site_print,
-                              colors.FAIL + colors.BOLD + "Request UNSUCCESSFULLY Received by the API. STATUS CODE:",
-                              str(geo_code_get.status_code) + colors.END)
+                              Colors.FAIL + Colors.BOLD + "Request UNSUCCESSFULLY Received by the API. STATUS CODE:",
+                              str(geo_code_get.status_code) + Colors.END)
                         exit(1)
 
                     class second_dose_monitor:
@@ -502,18 +488,18 @@ def covid_monitor():
                     SD_unknown_error = re.findall('Inventory unavailable', second_dose_monitor.status_desc)
                     if SD_unknown_error:
                         print(utc2est(), site_print,
-                              colors.FAIL + colors.BOLD + "Something went wrong. Please contact the owner." + colors.END)
+                              Colors.FAIL + Colors.BOLD + "Something went wrong. Please contact the owner." + Colors.END)
                         print(utc2est(), site_print,
-                              colors.FAIL + colors.BOLD + "Description:",
-                              geo_code.status_desc + colors.END)
+                              Colors.FAIL + Colors.BOLD + "Description:",
+                              geo_code.status_desc + Colors.END)
                         print(utc2est(), site_print,
-                              colors.FAIL + colors.BOLD + "Status Code:",
-                              geo_code.status_code + colors.END)
+                              Colors.FAIL + Colors.BOLD + "Status Code:",
+                              geo_code.status_code + Colors.END)
                         exit(1)
 
                     if second_dose_monitor.status_desc == "No stores with immunizations found":
                         print(utc2est(), site_print,
-                              colors.WARNING + "There are no Second Dose Availabilities at the location you selected." + colors.END)
+                              Colors.WARNING + "There are no Second Dose Availabilities at the location you selected." + Colors.END)
 
                     if second_dose_monitor.status_desc == "Success":
 
@@ -594,15 +580,15 @@ def covid_monitor():
                         def sd_reservation_frontend():
                             print(utc2est(),
                                   site_print,
-                                  colors.GREEN + '[Second Dose] Reserved Session Successfully ----------------' + colors.END)
-                            print(utc2est(), site_print, colors.CYAN + "Available Dates:",
-                                  colors.WARNING + str(sd_avail_dates.available_dates) + colors.END)
-                            print(utc2est(), site_print, colors.CYAN + "Allocation Date:",
-                                  colors.WARNING + second_dose_soft.allocation_date + colors.END)
-                            print(utc2est(), site_print, colors.CYAN + "Allocation Time:",
-                                  colors.WARNING + second_dose_times.time_slots + colors.END)
-                            print(utc2est(), site_print, colors.CYAN + "Visit Date and Time:",
-                                  colors.WARNING + second_dose_reserve.visit_date_time + colors.END)
+                                  Colors.GREEN + '[Second Dose] Reserved Session Successfully ----------------' + Colors.END)
+                            print(utc2est(), site_print, Colors.CYAN + "Available Dates:",
+                                  Colors.WARNING + str(sd_avail_dates.available_dates) + Colors.END)
+                            print(utc2est(), site_print, Colors.CYAN + "Allocation Date:",
+                                  Colors.WARNING + second_dose_soft.allocation_date + Colors.END)
+                            print(utc2est(), site_print, Colors.CYAN + "Allocation Time:",
+                                  Colors.WARNING + second_dose_times.time_slots + Colors.END)
+                            print(utc2est(), site_print, Colors.CYAN + "Visit Date and Time:",
+                                  Colors.WARNING + second_dose_reserve.visit_date_time + Colors.END)
 
                         if second_dose_reserve.status_desc == "Success":
                             sd_reservation_frontend()
@@ -611,7 +597,7 @@ def covid_monitor():
 
                     print('---------------------- Submission Process Beginning ----------------------')
                     print(utc2est(), site_print,
-                          colors.CYAN + colors.BOLD + "Beginning Submission Stage..." + colors.END)
+                          Colors.CYAN + Colors.BOLD + "Beginning Submission Stage..." + Colors.END)
 
                     def submit_reservation():
 
@@ -918,7 +904,7 @@ def covid_monitor():
                             JOHNSON_form_data = ''
 
                         if first_dose.__vaccine__ == 'PFIZER':
-                            print(utc2est(), site_print, colors.CYAN + "Reserving for Pfizer..." + colors.END)
+                            print(utc2est(), site_print, Colors.CYAN + "Reserving for Pfizer..." + Colors.END)
                             submit_registration_post = s.post(submit_registration.url,
                                                               json=submit_registration.PFIZER_form_data,
                                                               headers=submit_registration.headers,
@@ -934,21 +920,21 @@ def covid_monitor():
 
                             if submit_response.status_desc == "Success":
                                 print(utc2est(), site_print,
-                                      colors.GREEN + colors.BOLD + "Your CVS Appointment has been Successfully Scheduled." + colors.END)
+                                      Colors.GREEN + Colors.BOLD + "Your CVS Appointment has been Successfully Scheduled." + Colors.END)
                                 print(utc2est(), site_print,
-                                      colors.WARNING + colors.BOLD + 'Store Details ----------------' + colors.END)
+                                      Colors.WARNING + Colors.BOLD + 'Store Details ----------------' + Colors.END)
                                 print(utc2est(), site_print,
-                                      colors.CYAN + 'CVS Address: ' + colors.WARNING + colors.BOLD + store_address + colors.END)
+                                      Colors.CYAN + 'CVS Address: ' + Colors.WARNING + Colors.BOLD + store_address + Colors.END)
                                 print(utc2est(), site_print,
-                                      colors.WARNING + colors.BOLD + 'Time Details ----------------' + colors.END)
-                                print(utc2est(), site_print, colors.CYAN + "First Dose Time:",
-                                      colors.WARNING + colors.BOLD + first_dose_times.time_slots + colors.END)
-                                print(utc2est(), site_print, colors.CYAN + "Second Dose Time:",
-                                      colors.WARNING + colors.BOLD + second_dose_times.time_slots + colors.END)
+                                      Colors.WARNING + Colors.BOLD + 'Time Details ----------------' + Colors.END)
+                                print(utc2est(), site_print, Colors.CYAN + "First Dose Time:",
+                                      Colors.WARNING + Colors.BOLD + first_dose_times.time_slots + Colors.END)
+                                print(utc2est(), site_print, Colors.CYAN + "Second Dose Time:",
+                                      Colors.WARNING + Colors.BOLD + second_dose_times.time_slots + Colors.END)
 
                                 def webhook():
                                     Webhook = DiscordWebhook(
-                                        url=discord_webhook_url)
+                                        url=Discord_Webhook.url)
 
                                     embed = DiscordEmbed(title="Appointment Successfully Scheduled at CVS",
                                                          url='https://www.cvs.com/immunizations/covid-19-vaccine',
@@ -972,8 +958,8 @@ def covid_monitor():
                                 exit(1)
                             if submit_response.status_desc != "Success":
                                 print(utc2est(), site_print,
-                                      colors.FAIL + 'Your CVS Appointment Submission has been unsuccessfully' + colors.END)
-                                print(utc2est(), site_print, "CVS Submission Data ----------------" + colors.END)
+                                      Colors.FAIL + 'Your CVS Appointment Submission has been unsuccessfully' + Colors.END)
+                                print(utc2est(), site_print, "CVS Submission Data ----------------" + Colors.END)
                                 print(submit_registration_post.status_code)
                                 print(submit_registration.PFIZER_form_data)
                                 exit(1)
@@ -984,11 +970,11 @@ def covid_monitor():
 
     except ProxyError:
         print(utc2est(), site_print,
-              colors.FAIL + 'Something went wrong with your IP Address (ProxyError). Please restart the application' + colors.END)
+              Colors.FAIL + 'Something went wrong with your IP Address (ProxyError). Please restart the application' + Colors.END)
         input("Press Enter to close the application.")
     except MaxRetryError:
         print(utc2est(), site_print,
-              colors.FAIL + 'Something went wrong with your IP Address (MaxRetryError). Please restart the application' + colors.END)
+              Colors.FAIL + 'Something went wrong with your IP Address (MaxRetryError). Please restart the application' + Colors.END)
         input("Press Enter to close the application.")
 
 
