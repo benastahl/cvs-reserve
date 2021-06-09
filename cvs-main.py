@@ -46,7 +46,7 @@ vaccine_codes = {
 
 # VALUE CONTROLS
 # -------------------
-proxy = '149.104.46.54:17102:axvacl:lewbbf'
+proxy = ''  # 166.122.33.44:55555:axvacl:lewbbf
 
 vaccine_controls = ["PFIZER1", "PFIZER"]
 
@@ -138,7 +138,7 @@ if patient_info.non_medicare:
                 "insuranceType": "secondary",
                 "isPatientPrimaryCardholder": "Y",
                 "memberId": patient_info.insurance_id,
-                "provider": "Blue Cross Blue Shield of Massachusetts of Pennsylvania",
+                "provider": "Jane Doe's Insurance",
                 "relationshipWithCardHolder": "1",
                 "payerId": None
             }
