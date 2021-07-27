@@ -7,11 +7,11 @@ class Patient:
         self.dob = '1980-03-09'  # ex. 2000-07-08
         self.gender = ''  # M or F
         self.email = 'janedoe@gmail.com'
-        self.phone = '1231231234'  # ex. 6178626406
+        self.phone = '1231231234'
         self.address_1 = 'Jane Doe Road'
         self.address_2 = None
         self.city = 'Doe'
-        self.state = 'MA'  # ex. MA
+        self.state = 'MA'
         self.zip_code = '12345'
         self.race = 'White'
         self.race_value = '2106-3'

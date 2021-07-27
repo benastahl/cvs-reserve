@@ -5,10 +5,10 @@ from datetime import date
 from datetime import datetime
 from urllib3.exceptions import MaxRetryError
 from requests.exceptions import ProxyError
-from json.decoder import JSONDecodeError
 from discord_webhook import DiscordEmbed, DiscordWebhook
 from patient_info import Patient, Questions
 from general_info import Colors, Discord_Webhook
+from errors import Errors
 
 s = requests.Session()
 
@@ -16,6 +16,10 @@ s = requests.Session()
 def utc2est():
     current = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     return str(current) + ' EST'
+
+
+def error_handle(error):
+    return str(Errors.error_dict[error])
 
 
 site_print = Colors.CYAN + "[VACCINE SEARCH]" + Colors.END
@@ -27,6 +31,50 @@ api_headers = {
     'referer': 'https://www.cvs.com/',
     'origin': 'https://www.cvs.com',
     'x-api-key': 'rFd64We9AwyvAFzIXsoSp8bYuewNohOZ'
+
+}
+
+monitor_url = 'https://www.cvs.com/Services/ICEAGPV1/immunization/1.0.0/getIMZStores'
+monitor_headers = {
+    'accept': 'application/json',
+    'referer': 'https://www.cvs.com/vaccine/intake/store/cvd-store-select/first-dose-select',
+    'origin': 'https://www.cvs.com',
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36',
+    'sec-ch-ua': '"Google Chrome";v="89"',
+    'sec-ch-ua-mobile': '?0',
+    'accept-type': 'application/json'
+}
+first_dose_soft_url = 'https://www.cvs.com/services/ICEAGPV1/inventory/1.0.0/softAllocation'
+first_dose_soft_headers = {
+    'accept': 'application/json',
+    'referer': 'https://www.cvs.com/vaccine/intake/store/cvd-store-select/dose-select',
+    'origin': 'https://www.cvs.com',
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36',
+    'sec-ch-ua': '"Google Chrome";v="89"',
+    'sec-ch-ua-mobile': '?0',
+    'accept-type': 'application/json'
+}
+time_url = 'https://api.cvshealth.com/scheduler/v3/clinics/availabletimeslots'
+reserve_url = 'https://api.cvshealth.com/scheduler/v3/clinics/reservation'
+sd_monitor_headers = {
+    'accept': 'application/json',
+    'referer': 'https://www.cvs.com/vaccine/intake/store/cvd-store-select/second-dose-select',
+    'origin': 'https://www.cvs.com',
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36',
+    'sec-ch-ua': '"Google Chrome";v="89"',
+    'sec-ch-ua-mobile': '?0',
+    'accept-type': 'application/json'
+}
+submit_registration_url = 'https://www.cvs.com/Services/ICEAGPV1/immunization/1.0.0/submitImzRegistration'
+submit_registration_headers = {
+    'accept': 'application/json',
+    'referer': 'https://www.cvs.com/vaccine/intake/store/consent',
+    'origin': 'https://www.cvs.com',
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36',
+    'sec-ch-ua': '"Google Chrome";v="89"',
+    'sec-ch-ua-mobile': '?0',
+    'accept-type': 'application/json',
+    'x-distil-ajax': 'xebztatfusvxtdxdzzerd'
 }
 
 vaccine_codes = {
@@ -39,8 +87,8 @@ vaccine_codes = {
 
 vaccine_controls = ["PFIZER1", "PFIZER"]
 
-home = input("Please enter your CVS location: ")
-radius = input("Radius: ")
+home = input("Please enter your location: ")
+radius = input("Monitor radius: ")
 monitor_delay = int(input("Monitor delay (Ex. 7=7s): "))
 
 
@@ -101,76 +149,63 @@ if not vaccine_controls:
     exit(1)
 
 
-def startup_print(vaccine_selection, cvs_location):
-    print(utc2est(), site_print, Colors.CYAN + "Monitor for CVS in", Colors.WARNING + cvs_location,
-          Colors.CYAN + "has begun..." + Colors.END)
-    print(utc2est(), site_print, Colors.CYAN + "Looking for:", str(vaccine_selection) + Colors.END)
+def monitor_loop_status(loop):
+    if loop == 1:
+        print(utc2est(), site_print,
+              Colors.BOLD + "No appointments available at the location you selected. Monitoring for appointments..." + Colors.END)
+    elif loop == 360:
+        print(utc2est(), site_print, Colors.BOLD + "Still searching for appointments..." + Colors.END)
+    elif loop == 540:
+        print(utc2est(), site_print, Colors.BOLD + "Still searching for appointments..." + Colors.END)
+    elif loop == 720:
+        print(utc2est(), site_print, Colors.BOLD + "Still searching for appointments..." + Colors.END)
+    elif loop == 900:
+        print(utc2est(), site_print, Colors.BOLD + "Still searching for appointments..." + Colors.END)
 
 
 def covid_monitor():
+    print(utc2est(), site_print, Colors.CYAN + "Monitor for CVS in", Colors.WARNING + home,
+          Colors.CYAN + "has begun..." + Colors.END)
+    print(utc2est(), site_print, Colors.CYAN + "Looking for:", str(vaccine_controls) + Colors.END)
     try:
         for monitor_loop in range(9999):
 
             # [First Dose] Monitor
 
-            def monitor_loop_status(loop):
-                if loop == 1:
-                    print(utc2est(), site_print,
-                          Colors.BOLD + "No appointments available at the location you selected. Monitoring for appointments..." + Colors.END)
-                elif loop == 360:
-                    print(utc2est(), site_print, Colors.BOLD + "Still searching for appointments..." + Colors.END)
-                elif loop == 540:
-                    print(utc2est(), site_print, Colors.BOLD + "Still searching for appointments..." + Colors.END)
-                elif loop == 720:
-                    print(utc2est(), site_print, Colors.BOLD + "Still searching for appointments..." + Colors.END)
-                elif loop == 900:
-                    print(utc2est(), site_print, Colors.BOLD + "Still searching for appointments..." + Colors.END)
-
             time.sleep(monitor_delay)
 
-            class monitor:
-                headers = {
-                    'accept': 'application/json',
-                    'referer': 'https://www.cvs.com/vaccine/intake/store/cvd-store-select/first-dose-select',
-                    'origin': 'https://www.cvs.com',
-                    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36',
-                    'sec-ch-ua': '"Google Chrome";v="89"',
-                    'sec-ch-ua-mobile': '?0',
-                    'accept-type': 'application/json'
-                }
-                form_data = {
-                    "requestMetaData": {
-                        "appName": "CVS_WEB",
-                        "lineOfBusiness": "RETAIL",
-                        "channelName": "WEB",
-                        "deviceType": "DESKTOP",
-                        "deviceToken": "7777",
-                        "apiKey": "a2ff75c6-2da7-4299-929d-d670d827ab4a",
-                        "source": "ICE_WEB",
-                        "securityType": "apiKey",
-                        "responseFormat": "JSON",
-                        "type": "cn-dep"
-                    },
-                    "requestPayloadData": {
-                        "selectedImmunization": [
-                            "CVD"
-                        ],
-                        "distanceInMiles": radius,
-                        "imzData": [
-                            {
-                                "imzType": "CVD",
-                                "ndc": vaccine_code_list,
-                                "allocationType": "1"
-                            }
-                        ],
-                        "searchCriteria": {
-                            "addressLine": home
+            monitor_form_data = {
+                "requestMetaData": {
+                    "appName": "CVS_WEB",
+                    "lineOfBusiness": "RETAIL",
+                    "channelName": "WEB",
+                    "deviceType": "DESKTOP",
+                    "deviceToken": "7777",
+                    "apiKey": "a2ff75c6-2da7-4299-929d-d670d827ab4a",
+                    "source": "ICE_WEB",
+                    "securityType": "apiKey",
+                    "responseFormat": "JSON",
+                    "type": "cn-dep"
+                },
+                "requestPayloadData": {
+                    "selectedImmunization": [
+                        "CVD"
+                    ],
+                    "distanceInMiles": radius,
+                    "imzData": [
+                        {
+                            "imzType": "CVD",
+                            "ndc": vaccine_code_list,
+                            "allocationType": "1"
                         }
+                    ],
+                    "searchCriteria": {
+                        "addressLine": home
                     }
                 }
-                url = 'https://www.cvs.com/Services/ICEAGPV1/immunization/1.0.0/getIMZStores'
+            }
 
-            geo_code_get = s.post(monitor.url, json=monitor.form_data, headers=monitor.headers)
+            geo_code_get = s.post(monitor_url, json=monitor_form_data, headers=monitor_headers)
 
             if geo_code_get.status_code != 200:
                 print(utc2est(), site_print,
@@ -182,30 +217,22 @@ def covid_monitor():
                     print(utc2est(), site_print,
                           Colors.CYAN + Colors.BOLD + "Request Successfully Received by the API." + Colors.END)
 
-            class geo_code:
-                status_desc = geo_code_get.json()["responseMetaData"]["statusDesc"]
-                status_code = geo_code_get.json()["responseMetaData"]["statusCode"]
+            geo_code_status_desc = geo_code_get.json()["responseMetaData"]["statusDesc"]
+            geo_code_status_code = geo_code_get.json()["responseMetaData"]["statusCode"]
 
-            unknown_error = re.findall('Inventory unavailable', geo_code.status_desc)
+            unknown_error = re.findall('Inventory unavailable', geo_code_status_desc)
             if unknown_error:
-                print(utc2est(), site_print,
-                      Colors.FAIL + Colors.BOLD + "Something went wrong. Please contact the owner." + Colors.END)
-                print(utc2est(), site_print,
-                      Colors.FAIL + Colors.BOLD + "Description:", geo_code.status_desc + Colors.END)
-                print(utc2est(), site_print,
-                      Colors.FAIL + Colors.BOLD + "Status Code:", geo_code.status_code + Colors.END)
+                print(error_handle("unknown"))
+
+            if geo_code_status_desc == 'Failed calling getStoreDetails -Locations Not Found':
+                print(error_handle("location_not_found"))
                 exit(1)
 
-            if geo_code.status_desc == 'Failed calling getStoreDetails -Locations Not Found':
-                print(utc2est(), site_print,
-                      Colors.FAIL + Colors.BOLD + "The location you typed in could not be located or might be in a format that is unrecognizable. Please type in a new location. (Ex. 'Wayland, MA', '01778')" + Colors.END)
-                exit(1)
-
-            if geo_code.status_desc == "No stores with immunizations found":
+            if geo_code_status_desc == "No stores with immunizations found":
                 monitor_loop_status(monitor_loop)
                 continue
 
-            if geo_code.status_desc == "Did you mean" or geo_code.status_desc == "Success":
+            if geo_code_status_desc == "Did you mean" or geo_code_status_desc == "Success":
                 # Coordinates
 
                 latitude = geo_code_get.json()["responsePayloadData"]["locations"][0]["geographicLatitudePoint"]
@@ -248,7 +275,7 @@ def covid_monitor():
 
                     # [First Dose] Geo Code Submitting
 
-                    getIMZStores = s.post(monitor.url, json=geo_form_data, headers=monitor.headers)
+                    getIMZStores = s.post(monitor_url, json=geo_form_data, headers=monitor_headers)
 
                     if getIMZStores.json()["responseMetaData"]["statusDesc"] == "No stores with immunizations found":
                         monitor_loop_status(IMZRetry)
@@ -283,74 +310,64 @@ def covid_monitor():
                         # Beginning Reservation Process
                         print('---------------------- Reservation Process Beginning ----------------------')
                         for NoADDates in range(len(available_dates)):
+                            vaccine_select = None
 
                             # [First Dose] Soft Allocation
 
-                            class first_dose_soft:
-                                url = 'https://www.cvs.com/services/ICEAGPV1/inventory/1.0.0/softAllocation'
-                                fd_headers = {
-                                    'accept': 'application/json',
-                                    'referer': 'https://www.cvs.com/vaccine/intake/store/cvd-store-select/dose-select',
-                                    'origin': 'https://www.cvs.com',
-                                    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36',
-                                    'sec-ch-ua': '"Google Chrome";v="89"',
-                                    'sec-ch-ua-mobile': '?0',
-                                    'accept-type': 'application/json'
+                            first_dose_soft_form_data = {
+                                "requestMetaData": {
+                                    "appName": "CVS_WEB",
+                                    "lineOfBusiness": "RETAIL",
+                                    "channelName": "WEB",
+                                    "deviceType": "DESKTOP",
+                                    "deviceToken": "7777",
+                                    "apiKey": "a2ff75c6-2da7-4299-929d-d670d827ab4a",
+                                    "source": "ICE_WEB",
+                                    "securityType": "apiKey",
+                                    "responseFormat": "JSON",
+                                    "type": "cn-micro-imzinventoryapp"
+                                },
+                                "requestPayloadData": {
+                                    "allocationDate": available_dates[NoADDates],
+                                    "ndc": vaccine_code_list,
+                                    "storeId": store_id,
+                                    "allocationType": "1"
                                 }
-                                form_data = {
-                                    "requestMetaData": {
-                                        "appName": "CVS_WEB",
-                                        "lineOfBusiness": "RETAIL",
-                                        "channelName": "WEB",
-                                        "deviceType": "DESKTOP",
-                                        "deviceToken": "7777",
-                                        "apiKey": "a2ff75c6-2da7-4299-929d-d670d827ab4a",
-                                        "source": "ICE_WEB",
-                                        "securityType": "apiKey",
-                                        "responseFormat": "JSON",
-                                        "type": "cn-micro-imzinventoryapp"
-                                    },
-                                    "requestPayloadData": {
-                                        "allocationDate": available_dates[NoADDates],
-                                        "ndc": vaccine_code_list,
-                                        "storeId": store_id,
-                                        "allocationType": "1"
-                                    }
-                                }
+                            }
 
-                            first_dose_SA = s.post(first_dose_soft.url, json=first_dose_soft.form_data,
-                                                   headers=first_dose_soft.fd_headers, )
+                            first_dose_SA = s.post(first_dose_soft_url, json=first_dose_soft_form_data,
+                                                   headers=first_dose_soft_headers, )
 
-                            class first_dose:
-                                # General Variables
-                                status_desc = first_dose_SA.json()["responseMetaData"]["statusDesc"]
-                                status_code = first_dose_SA.json()["responseMetaData"]["statusCode"]
+                            # General Variables
+                            first_dose_status_desc = first_dose_SA.json()["responseMetaData"]["statusDesc"]
+                            first_dose_status_code = first_dose_SA.json()["responseMetaData"]["statusCode"]
 
-                                # Code Variables
-                                ndc = first_dose_SA.json()["responsePayloadData"]["data"]["ndc"]
-                                allocation_date = first_dose_SA.json()["responsePayloadData"]["data"]["allocationDate"]
-                                allocation_code = first_dose_SA.json()["responsePayloadData"]["data"]["allocationCode"]
+                            # Code Variables
+                            first_dose_ndc = first_dose_SA.json()["responsePayloadData"]["data"]["ndc"]
+                            first_dose_allocation_date = first_dose_SA.json()["responsePayloadData"]["data"][
+                                "allocationDate"]
+                            first_dose_allocation_code = first_dose_SA.json()["responsePayloadData"]["data"][
+                                "allocationCode"]
 
-                                # PFIZER NDC Code Adaptation
-                                if ndc == "59267100002" or "59267100003":
-                                    print(utc2est(), site_print,
-                                          Colors.CYAN + "Reserving a PFIZER appointment..." + Colors.END)
-                                    ndc = ["59267100002", "59267100003"]
-                                    __vaccine__ = 'PFIZER'
+                            # PFIZER NDC Code Adaptation
+                            if first_dose_ndc == "59267100002" or first_dose_ndc == "59267100003":
+                                print(utc2est(), site_print,
+                                      Colors.CYAN + "Reserving a PFIZER appointment..." + Colors.END)
+                                ndc = ["59267100002", "59267100003"]
+                                vaccine_select = 'PFIZER'
 
-                                elif ndc == "59676058015":
-                                    print(utc2est(), site_print,
-                                          Colors.CYAN + "Reserving a JOHNSON & JOHNSON appointment..." + Colors.END)
+                            elif first_dose_ndc == "59676058015":
+                                print(utc2est(), site_print,
+                                      Colors.CYAN + "Reserving a JOHNSON & JOHNSON appointment..." + Colors.END)
 
-                                elif ndc == "80777027399":
-                                    print(utc2est(), site_print,
-                                          Colors.CYAN + "Reserving a MODERNA appointment..." + Colors.END)
+                            elif first_dose_ndc == "80777027399":
+                                print(utc2est(), site_print,
+                                      Colors.CYAN + "Reserving a MODERNA appointment..." + Colors.END)
 
                             # [First Dose] Available Time Slots
 
-                            time_url = 'https://api.cvshealth.com/scheduler/v3/clinics/availabletimeslots'
                             fd_time_form_params = {
-                                'visitStartDate': first_dose.allocation_date,
+                                'visitStartDate': first_dose_allocation_date,
                                 'clinicId': "CVS_" + store_id
                             }
 
@@ -359,48 +376,44 @@ def covid_monitor():
                             if first_dose_AT.json()["header"][
                                 "statusDescription"] == "No Available Timeslots Found for Reservation":
                                 print(utc2est(), site_print, Colors.WARNING + 'No Available Time Slots for',
-                                      first_dose.allocation_date + ". Trying another day..." + Colors.END)
+                                      first_dose_allocation_date + ". Trying another day..." + Colors.END)
                                 print(first_dose_AT.json())
                                 continue
 
                             if first_dose_AT.json()["header"][
                                 "statusDescription"] != "No Available Timeslots Found for Reservation":
 
-                                class first_dose_times:
-                                    time_slots = first_dose_AT.json()["details"][0]["timeSlots"][0]
+                                first_dose_times_time_slots = first_dose_AT.json()["details"][0]["timeSlots"][0]
 
                                 # [First Dose] Reserve
-
-                                reserve_url = 'https://api.cvshealth.com/scheduler/v3/clinics/reservation'
 
                                 fd_reserve_form_data = {
                                     "reservation": {
                                         "clinicId": "CVS_" + store_id,
                                         "clinicType": "IMZ_STORE",
-                                        "visitDateTime": first_dose_times.time_slots
+                                        "visitDateTime": first_dose_times_time_slots
                                     }
                                 }
 
                                 first_dose_R = s.post(reserve_url, json=fd_reserve_form_data, headers=api_headers,
                                                       )
 
-                                class first_dose_reserve:
-                                    reservation_code = first_dose_R.json()["details"]["reservationCode"]
-                                    status_desc = first_dose_R.json()["header"]["statusDescription"]
-                                    visit_date_time = first_dose_R.json()["details"]["visitDateTime"]
+                                first_dose_reserve_reservation_code = first_dose_R.json()["details"]["reservationCode"]
+                                first_dose_reserve_status_desc = first_dose_R.json()["header"]["statusDescription"]
+                                first_dose_reserve_visit_date_time = first_dose_R.json()["details"]["visitDateTime"]
 
                                 # [First Dose] Reservation Frontend
 
-                                if first_dose_reserve.status_desc == "Success":
+                                if first_dose_reserve_status_desc == "Success":
                                     print(utc2est(),
                                           site_print,
                                           Colors.GREEN + '[First Dose] Reserved Session Successfully ----------------' + Colors.END)
                                     print(utc2est(), site_print, Colors.CYAN + "Allocation Date:",
-                                          Colors.WARNING + first_dose.allocation_date + Colors.END)
+                                          Colors.WARNING + first_dose_allocation_date + Colors.END)
                                     print(utc2est(), site_print, Colors.CYAN + "Allocation Time:",
-                                          Colors.WARNING + first_dose_times.time_slots + Colors.END)
+                                          Colors.WARNING + first_dose_times_time_slots + Colors.END)
                                     print(utc2est(), site_print, Colors.CYAN + "Visit Date and Time:",
-                                          Colors.WARNING + first_dose_reserve.visit_date_time + Colors.END)
+                                          Colors.WARNING + first_dose_reserve_visit_date_time + Colors.END)
                                     print('-----------------------------------------')
 
                                 # SECOND DOSE
@@ -431,8 +444,8 @@ def covid_monitor():
                                         "imzData": [
                                             {
                                                 "imzType": "CVD",
-                                                "ndc": first_dose.ndc,
-                                                "firstDoseDate": first_dose.allocation_date,
+                                                "ndc": first_dose_ndc,
+                                                "firstDoseDate": first_dose_allocation_date,
                                                 "allocationType": "2"
                                             }
                                         ],
@@ -443,17 +456,8 @@ def covid_monitor():
                                         }
                                     }
                                 }
-                                sd_monitor_headers = {
-                                    'accept': 'application/json',
-                                    'referer': 'https://www.cvs.com/vaccine/intake/store/cvd-store-select/second-dose-select',
-                                    'origin': 'https://www.cvs.com',
-                                    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36',
-                                    'sec-ch-ua': '"Google Chrome";v="89"',
-                                    'sec-ch-ua-mobile': '?0',
-                                    'accept-type': 'application/json'
-                                }
 
-                                second_dose_GIS = s.post(monitor.url, json=sd_monitor_form_data,
+                                second_dose_GIS = s.post(monitor_url, json=sd_monitor_form_data,
                                                          headers=sd_monitor_headers,
                                                          )
 
@@ -463,34 +467,26 @@ def covid_monitor():
                                           str(geo_code_get.status_code) + Colors.END)
                                     exit(1)
 
-                                class second_dose_monitor:
-                                    status_desc = second_dose_GIS.json()["responseMetaData"]["statusDesc"]
-                                    status_code = second_dose_GIS.json()["responseMetaData"]["statusCode"]
+                                second_dose_monitor_status_desc = second_dose_GIS.json()["responseMetaData"][
+                                    "statusDesc"]
+                                second_dose_monitor_status_code = second_dose_GIS.json()["responseMetaData"][
+                                    "statusCode"]
 
-                                SD_unknown_error = re.findall('Inventory unavailable', second_dose_monitor.status_desc)
+                                SD_unknown_error = re.findall('Inventory unavailable', second_dose_monitor_status_desc)
                                 if SD_unknown_error:
-                                    print(utc2est(), site_print,
-                                          Colors.FAIL + Colors.BOLD + "Something went wrong. Please contact the owner." + Colors.END)
-                                    print(utc2est(), site_print,
-                                          Colors.FAIL + Colors.BOLD + "Description:",
-                                          geo_code.status_desc + Colors.END)
-                                    print(utc2est(), site_print,
-                                          Colors.FAIL + Colors.BOLD + "Status Code:",
-                                          geo_code.status_code + Colors.END)
-                                    exit(1)
+                                    print(error_handle("unknown"))
 
-                                if second_dose_monitor.status_desc == "No stores with immunizations found":
+                                if second_dose_monitor_status_desc == "No stores with immunizations found":
                                     print(utc2est(), site_print,
                                           Colors.WARNING + "There are no Second Dose Availabilities at the location you selected." + Colors.END)
 
-                                if second_dose_monitor.status_desc == "Success":
+                                if second_dose_monitor_status_desc == "Success":
 
-                                    class sd_avail_dates:
-                                        available_dates = \
-                                            second_dose_GIS.json()["responsePayloadData"]["locations"][0][
-                                                "imzAdditionalData"][
-                                                0][
-                                                "availableDates"]
+                                    sd_avail_dates_available_dates = \
+                                        second_dose_GIS.json()["responsePayloadData"]["locations"][0][
+                                            "imzAdditionalData"][
+                                            0][
+                                            "availableDates"]
 
                                     # [Second Dose] Soft Allocation
 
@@ -508,36 +504,36 @@ def covid_monitor():
                                             "type": "cn-micro-imzinventoryapp"
                                         },
                                         "requestPayloadData": {
-                                            "allocationDate": sd_avail_dates.available_dates[0],
-                                            "ndc": first_dose.ndc,
+                                            "allocationDate": sd_avail_dates_available_dates[0],
+                                            "ndc": first_dose_ndc,
                                             "storeId": store_id,
                                             "allocationType": "2",
-                                            "firstDoseDate": first_dose.allocation_date
+                                            "firstDoseDate": first_dose_allocation_date
                                         }
                                     }
 
-                                    second_dose_SA = s.post(first_dose_soft.url, json=sd_allocation_form_data,
-                                                            headers=first_dose_soft.fd_headers,
+                                    second_dose_SA = s.post(first_dose_soft_url, json=sd_allocation_form_data,
+                                                            headers=first_dose_soft_headers,
                                                             )
 
-                                    class second_dose_soft:
-                                        allocation_date = second_dose_SA.json()["responsePayloadData"]["data"][
+                                    second_dose_soft_allocation_date = \
+                                        second_dose_SA.json()["responsePayloadData"]["data"][
                                             "allocationDate"]
-                                        allocation_code = second_dose_SA.json()["responsePayloadData"]["data"][
+                                    second_dose_soft_allocation_code = \
+                                        second_dose_SA.json()["responsePayloadData"]["data"][
                                             "allocationCode"]
 
                                     # [Second Dose] Available Time Slots
 
                                     sd_time_form_params = {
-                                        'visitStartDate': second_dose_soft.allocation_date,
+                                        'visitStartDate': second_dose_soft_allocation_date,
                                         'clinicId': "CVS_" + store_id
                                     }
 
                                     second_dose_AT = s.get(time_url, params=sd_time_form_params, headers=api_headers,
                                                            )
 
-                                    class second_dose_times:
-                                        time_slots = second_dose_AT.json()["details"][0]["timeSlots"][0]
+                                    second_dose_times_time_slots = second_dose_AT.json()["details"][0]["timeSlots"][0]
 
                                     # [Second Dose] Reserve
 
@@ -545,57 +541,42 @@ def covid_monitor():
                                         "reservation": {
                                             "clinicId": "CVS_" + store_id,
                                             "clinicType": "IMZ_STORE",
-                                            "visitDateTime": second_dose_times.time_slots
+                                            "visitDateTime": second_dose_times_time_slots
                                         }
                                     }
 
                                     second_dose_R = s.post(reserve_url, json=sd_reserve_form_data, headers=api_headers,
                                                            )
 
-                                    class second_dose_reserve:
-                                        status_desc = second_dose_R.json()["header"]["statusDescription"]
-                                        reservation_code = second_dose_R.json()["details"]["reservationCode"]
-                                        visit_date_time = second_dose_R.json()["details"]["visitDateTime"]
+                                    second_dose_reserve_status_desc = second_dose_R.json()["header"][
+                                        "statusDescription"]
+                                    second_dose_reserve_reservation_code = second_dose_R.json()["details"][
+                                        "reservationCode"]
+                                    second_dose_reserve_visit_date_time = second_dose_R.json()["details"][
+                                        "visitDateTime"]
 
                                     # [Second Dose] Reservation Frontend
 
-                                    def sd_reservation_frontend():
+                                    if second_dose_reserve_status_desc == "Success":
                                         print(utc2est(),
                                               site_print,
                                               Colors.GREEN + '[Second Dose] Reserved Session Successfully ----------------' + Colors.END)
                                         print(utc2est(), site_print, Colors.CYAN + "Available Dates:",
-                                              Colors.WARNING + str(sd_avail_dates.available_dates) + Colors.END)
+                                              Colors.WARNING + str(sd_avail_dates_available_dates) + Colors.END)
                                         print(utc2est(), site_print, Colors.CYAN + "Allocation Date:",
-                                              Colors.WARNING + second_dose_soft.allocation_date + Colors.END)
+                                              Colors.WARNING + second_dose_soft_allocation_date + Colors.END)
                                         print(utc2est(), site_print, Colors.CYAN + "Allocation Time:",
-                                              Colors.WARNING + second_dose_times.time_slots + Colors.END)
+                                              Colors.WARNING + second_dose_times_time_slots + Colors.END)
                                         print(utc2est(), site_print, Colors.CYAN + "Visit Date and Time:",
-                                              Colors.WARNING + second_dose_reserve.visit_date_time + Colors.END)
+                                              Colors.WARNING + second_dose_reserve_visit_date_time + Colors.END)
 
-                                    if second_dose_reserve.status_desc == "Success":
-                                        sd_reservation_frontend()
+                                        # Submit Registration #
 
-                                # Submit Registration #
+                                        print('---------------------- Submission Process Beginning ----------------------')
+                                        print(utc2est(), site_print,
+                                              Colors.CYAN + Colors.BOLD + "Beginning Submission Stage..." + Colors.END)
 
-                                print('---------------------- Submission Process Beginning ----------------------')
-                                print(utc2est(), site_print,
-                                      Colors.CYAN + Colors.BOLD + "Beginning Submission Stage..." + Colors.END)
-
-                                def submit_reservation():
-
-                                    class submit_registration:
-                                        url = 'https://www.cvs.com/Services/ICEAGPV1/immunization/1.0.0/submitImzRegistration'
-                                        headers = {
-                                            'accept': 'application/json',
-                                            'referer': 'https://www.cvs.com/vaccine/intake/store/consent',
-                                            'origin': 'https://www.cvs.com',
-                                            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36',
-                                            'sec-ch-ua': '"Google Chrome";v="89"',
-                                            'sec-ch-ua-mobile': '?0',
-                                            'accept-type': 'application/json',
-                                            'x-distil-ajax': 'xebztatfusvxtdxdzzerd'
-                                        }
-                                        PFIZER_form_data = {
+                                        submit_registration_PFIZER_form_data = {
                                             "requestMetaData": {
                                                 "appName": "CVS_WEB",
                                                 "lineOfBusiness": "RETAIL",
@@ -827,9 +808,9 @@ def covid_monitor():
                                                         {
                                                             "schedulerRefId": "CVS_" + str(store_id),
                                                             "schedulerRefType": "IMZ_STORE",
-                                                            "reservationCode": first_dose_reserve.reservation_code,
+                                                            "reservationCode": first_dose_reserve_reservation_code,
                                                             "selectedTimezone": "America/New_York",
-                                                            "selectedUTCTimestamp": first_dose_reserve.visit_date_time,
+                                                            "selectedUTCTimestamp": first_dose_reserve_visit_date_time,
                                                             "selectedImmunization": [
                                                                 {
                                                                     "code": "CVD",
@@ -837,7 +818,7 @@ def covid_monitor():
                                                                     "doseNumber": "1",
                                                                     "ndcCode": "59267100002",
                                                                     "ndcName": "PFIZER COVID-19 VACCINE (EUA)",
-                                                                    "allocationCode": first_dose.allocation_code
+                                                                    "allocationCode": first_dose_allocation_code
                                                                 }
                                                             ],
                                                             "facility": {
@@ -847,9 +828,9 @@ def covid_monitor():
                                                         {
                                                             "schedulerRefId": "CVS_" + store_id,
                                                             "schedulerRefType": "IMZ_STORE",
-                                                            "reservationCode": second_dose_reserve.reservation_code,
+                                                            "reservationCode": second_dose_reserve_reservation_code,
                                                             "selectedTimezone": "America/New_York",
-                                                            "selectedUTCTimestamp": second_dose_reserve.visit_date_time,
+                                                            "selectedUTCTimestamp": second_dose_reserve_visit_date_time,
                                                             "selectedImmunization": [
                                                                 {
                                                                     "code": "CVD",
@@ -857,7 +838,7 @@ def covid_monitor():
                                                                     "doseNumber": "2",
                                                                     "ndcCode": "59267100002",
                                                                     "ndcName": "PFIZER COVID-19 VACCINE (EUA)",
-                                                                    "allocationCode": second_dose_soft.allocation_code
+                                                                    "allocationCode": second_dose_soft_allocation_code
                                                                 }
                                                             ],
                                                             "facility": {
@@ -887,86 +868,72 @@ def covid_monitor():
                                                 }
                                             }
                                         }
-                                        JOHNSON_form_data = ''
 
-                                    if first_dose.__vaccine__ == 'PFIZER':
-                                        print(utc2est(), site_print,
-                                              Colors.CYAN + "Reserving for Pfizer..." + Colors.END)
-                                        submit_registration_post = s.post(submit_registration.url,
-                                                                          json=submit_registration.PFIZER_form_data,
-                                                                          headers=submit_registration.headers,
-                                                                          )
+                                        if vaccine_select == 'PFIZER':
+                                            print(utc2est(), site_print,
+                                                  Colors.CYAN + "Reserving for Pfizer..." + Colors.END)
+                                            submit_registration_post = s.post(submit_registration_url,
+                                                                              json=submit_registration_PFIZER_form_data,
+                                                                              headers=submit_registration_headers,
+                                                                              )
 
-                                        class submit_response:
-                                            try:
-                                                status_desc = submit_registration_post.json()["responseMetaData"][
-                                                    "statusDesc"]
-                                            except JSONDecodeError:
-                                                print(submit_registration.PFIZER_form_data)
+                                            submit_response_status_desc = submit_registration_post.json()["responseMetaData"][
+                                                "statusDesc"]
+
+                                            if submit_response_status_desc == "Success":
+                                                print(utc2est(), site_print,
+                                                      Colors.GREEN + Colors.BOLD + "Your CVS Appointment has been Successfully Scheduled." + Colors.END)
+                                                print(utc2est(), site_print,
+                                                      Colors.WARNING + Colors.BOLD + 'Store Details ----------------' + Colors.END)
+                                                print(utc2est(), site_print,
+                                                      Colors.CYAN + 'CVS Address: ' + Colors.WARNING + Colors.BOLD + store_address + Colors.END)
+                                                print(utc2est(), site_print,
+                                                      Colors.WARNING + Colors.BOLD + 'Time Details ----------------' + Colors.END)
+                                                print(utc2est(), site_print, Colors.CYAN + "First Dose Time:",
+                                                      Colors.WARNING + Colors.BOLD + first_dose_times_time_slots + Colors.END)
+                                                print(utc2est(), site_print, Colors.CYAN + "Second Dose Time:",
+                                                      Colors.WARNING + Colors.BOLD + second_dose_times_time_slots + Colors.END)
+
+                                                def webhook():
+                                                    Webhook = DiscordWebhook(
+                                                        url=Discord_Webhook.url)
+
+                                                    embed = DiscordEmbed(title="Appointment Successfully Scheduled at CVS",
+                                                                         url='https://www.cvs.com/immunizations/covid-19-vaccine',
+                                                                         color=15987431)
+
+                                                    embed.set_footer(text='Covid-19 Appointment Monitor')
+
+                                                    embed.set_timestamp()
+
+                                                    embed.add_embed_field(name='CVS Location:', color=15987431,
+                                                                          value=store_address)
+                                                    embed.add_embed_field(name='First Dose Date:', color=15987431,
+                                                                          value=first_dose_times_time_slots)
+                                                    embed.add_embed_field(name='Second Dose Date:', color=15987431,
+                                                                          value=second_dose_times_time_slots)
+
+                                                    Webhook.add_embed(embed)
+
+                                                    Webhook.execute()
+
+                                                if Discord_Webhook.url:
+                                                    webhook()
+                                                exit(1)
+                                            if submit_response_status_desc != "Success":
+                                                print(utc2est(), site_print,
+                                                      Colors.FAIL + 'Your CVS Appointment Submission has been unsuccessfully' + Colors.END)
+                                                print(utc2est(), site_print,
+                                                      "CVS Submission Data ----------------" + Colors.END)
                                                 print(submit_registration_post.status_code)
-                                                print(submit_registration_post.text)
+                                                print(submit_registration_PFIZER_form_data)
+                                                exit(1)
 
-                                        if submit_response.status_desc == "Success":
-                                            print(utc2est(), site_print,
-                                                  Colors.GREEN + Colors.BOLD + "Your CVS Appointment has been Successfully Scheduled." + Colors.END)
-                                            print(utc2est(), site_print,
-                                                  Colors.WARNING + Colors.BOLD + 'Store Details ----------------' + Colors.END)
-                                            print(utc2est(), site_print,
-                                                  Colors.CYAN + 'CVS Address: ' + Colors.WARNING + Colors.BOLD + store_address + Colors.END)
-                                            print(utc2est(), site_print,
-                                                  Colors.WARNING + Colors.BOLD + 'Time Details ----------------' + Colors.END)
-                                            print(utc2est(), site_print, Colors.CYAN + "First Dose Time:",
-                                                  Colors.WARNING + Colors.BOLD + first_dose_times.time_slots + Colors.END)
-                                            print(utc2est(), site_print, Colors.CYAN + "Second Dose Time:",
-                                                  Colors.WARNING + Colors.BOLD + second_dose_times.time_slots + Colors.END)
-
-                                            def webhook():
-                                                Webhook = DiscordWebhook(
-                                                    url=Discord_Webhook.url)
-
-                                                embed = DiscordEmbed(title="Appointment Successfully Scheduled at CVS",
-                                                                     url='https://www.cvs.com/immunizations/covid-19-vaccine',
-                                                                     color=15987431)
-
-                                                embed.set_footer(text='Covid-19 Appointment Monitor')
-
-                                                embed.set_timestamp()
-
-                                                embed.add_embed_field(name='CVS Location:', color=15987431,
-                                                                      value=store_address)
-                                                embed.add_embed_field(name='First Dose Date:', color=15987431,
-                                                                      value=first_dose_times.time_slots)
-                                                embed.add_embed_field(name='Second Dose Date:', color=15987431,
-                                                                      value=second_dose_times.time_slots)
-
-                                                Webhook.add_embed(embed)
-
-                                                Webhook.execute()
-
-                                            if Discord_Webhook.url:
-                                                webhook()
-                                            exit(1)
-                                        if submit_response.status_desc != "Success":
-                                            print(utc2est(), site_print,
-                                                  Colors.FAIL + 'Your CVS Appointment Submission has been unsuccessfully' + Colors.END)
-                                            print(utc2est(), site_print,
-                                                  "CVS Submission Data ----------------" + Colors.END)
-                                            print(submit_registration_post.status_code)
-                                            print(submit_registration.PFIZER_form_data)
-                                            exit(1)
-
-                                submit_reservation()
-
-    except ProxyError:
+    except ProxyError or MaxRetryError:
         print(utc2est(), site_print,
               Colors.FAIL + 'Something went wrong with your IP Address (ProxyError). Please restart the application' + Colors.END)
-        input("Press Enter to close the application.")
-    except MaxRetryError:
-        print(utc2est(), site_print,
-              Colors.FAIL + 'Something went wrong with your IP Address (MaxRetryError). Please restart the application' + Colors.END)
         input("Press Enter to close the application.")
 
 
 if __name__ == '__main__':
-    startup_print(vaccine_controls, home)
     covid_monitor()
