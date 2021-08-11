@@ -106,31 +106,31 @@ def question_values(question_id):
         return 3
 
 
-if Patient().non_medicare:
+if Patient.non_medicare:
     insurance_data = {
         "typeId": 6,
         "typeText": "Insurance",
         "insuranceData": [
             {
-                "cardHolderFirstName": Patient().first_name,
-                "cardHolderLastName": Patient().last_name,
+                "cardHolderFirstName": Patient.first_name,
+                "cardHolderLastName": Patient.last_name,
                 "groupId": None,
                 "insuranceType": "secondary",
                 "isPatientPrimaryCardholder": "Y",
-                "memberId": Patient().insurance_id,
-                "provider": Patient().non_medicare_provider,
+                "memberId": Patient.insurance_id,
+                "provider": Patient.non_medicare_provider,
                 "relationshipWithCardHolder": "1",
                 "payerId": None
             }
         ]
     }
 
-if not Patient().non_medicare:
+if not Patient.non_medicare:
     insurance_data = {
         "typeId": 5,
         "typeText": "Medicare",
         "medicareData": {
-            "memberId": Patient().insurance_id
+            "memberId": Patient.insurance_id
         },
         "insuranceData": [
 
@@ -215,7 +215,7 @@ def covid_monitor():
             if monitor_loop == 0:
                 if geo_code_get.status_code == 200:
                     print(utc2est(), site_print,
-                          Colors.CYAN + Colors.BOLD + "Request Successfully Received by the API." + Colors.END)
+                          Colors.CYAN + Colors.BOLD + "Request Successfully Received by CVS API." + Colors.END)
 
             geo_code_status_desc = geo_code_get.json()["responseMetaData"]["statusDesc"]
             geo_code_status_code = geo_code_get.json()["responseMetaData"]["statusCode"]
@@ -594,26 +594,26 @@ def covid_monitor():
                                                     "patientId": "",
                                                     "encryptionType": "",
                                                     "patientData": {
-                                                        "firstName": Patient().first_name,
-                                                        "lastName": Patient().last_name,
-                                                        "DOB": Patient().dob,
-                                                        "gender": Patient().gender,
-                                                        "emailId": Patient().email,
-                                                        "phoneNumber": Patient().phone,
+                                                        "firstName": Patient.first_name,
+                                                        "lastName": Patient.last_name,
+                                                        "DOB": Patient.dob,
+                                                        "gender": Patient.gender,
+                                                        "emailId": Patient.email,
+                                                        "phoneNumber": Patient.phone,
                                                         "address": {
-                                                            "addressLine1": Patient().address_1,
-                                                            "addressLine2": Patient().address_2,
-                                                            "city": Patient().city,
-                                                            "state": Patient().state,
-                                                            "zip": Patient().zip_code
+                                                            "addressLine1": Patient.address_1,
+                                                            "addressLine2": Patient.address_2,
+                                                            "city": Patient.city,
+                                                            "state": Patient.state,
+                                                            "zip": Patient.zip_code
                                                         }
                                                     },
                                                     "immunizationAnswers": [
                                                         {
                                                             "questionId": "2",
                                                             "questionText": "Have you ever had a severe allergic reaction (e.g., anaphylaxis) to something? For example, a reaction for which you were treated with epinephrine, or EpiPen, or for which you had to go to the hospital? If yes, what are you allergic to?",
-                                                            "answerValue": question_values(Questions().question_id_2),
-                                                            "answerText": Questions().question_id_2,
+                                                            "answerValue": question_values(Questions.question_id_2),
+                                                            "answerText": Questions.question_id_2,
                                                             "answerFreeText": "",
                                                             "imzTypeCode": [
                                                                 {
@@ -625,8 +625,8 @@ def covid_monitor():
                                                         {
                                                             "questionId": "3",
                                                             "questionText": "Had you ever had a severe allergic reaction after receiving a COVID-19 vaccine?",
-                                                            "answerValue": question_values(Questions().question_id_3),
-                                                            "answerText": Questions().question_id_3,
+                                                            "answerValue": question_values(Questions.question_id_3),
+                                                            "answerText": Questions.question_id_3,
                                                             "answerFreeText": "",
                                                             "imzTypeCode": [
                                                                 {
@@ -638,8 +638,8 @@ def covid_monitor():
                                                         {
                                                             "questionId": "4",
                                                             "questionText": "Have you ever had a severe allergic reaction after receiving another vaccine or injectable medication?",
-                                                            "answerValue": question_values(Questions().question_id_4),
-                                                            "answerText": Questions().question_id_4,
+                                                            "answerValue": question_values(Questions.question_id_4),
+                                                            "answerText": Questions.question_id_4,
                                                             "answerFreeText": "",
                                                             "imzTypeCode": [
                                                                 {
@@ -651,8 +651,8 @@ def covid_monitor():
                                                         {
                                                             "questionId": "5",
                                                             "questionText": "Have you ever had a severe allergic reaction after receiving Polyethylene Glycol?",
-                                                            "answerValue": question_values(Questions().question_id_5),
-                                                            "answerText": Questions().question_id_5,
+                                                            "answerValue": question_values(Questions.question_id_5),
+                                                            "answerText": Questions.question_id_5,
                                                             "answerFreeText": "",
                                                             "imzTypeCode": [
                                                                 {
@@ -664,8 +664,8 @@ def covid_monitor():
                                                         {
                                                             "questionId": "6",
                                                             "questionText": "Have you ever had a severe allergic reaction related to receiving Polysorbate or products containing Polysorbate?",
-                                                            "answerValue": question_values(Questions().question_id_6),
-                                                            "answerText": Questions().question_id_6,
+                                                            "answerValue": question_values(Questions.question_id_6),
+                                                            "answerText": Questions.question_id_6,
                                                             "answerFreeText": "",
                                                             "imzTypeCode": [
                                                                 {
@@ -677,8 +677,8 @@ def covid_monitor():
                                                         {
                                                             "questionId": "7",
                                                             "questionText": "For women, are you currently pregnant or breastfeeding?",
-                                                            "answerValue": question_values(Questions().question_id_7),
-                                                            "answerText": Questions().question_id_7,
+                                                            "answerValue": question_values(Questions.question_id_7),
+                                                            "answerText": Questions.question_id_7,
                                                             "answerFreeText": "",
                                                             "imzTypeCode": [
                                                                 {
@@ -690,8 +690,8 @@ def covid_monitor():
                                                         {
                                                             "questionId": "11",
                                                             "questionText": "Do you have a bleeding disorder or are you taking a blood thinner?",
-                                                            "answerValue": question_values(Questions().question_id_11),
-                                                            "answerText": Questions().question_id_11,
+                                                            "answerValue": question_values(Questions.question_id_11),
+                                                            "answerText": Questions.question_id_11,
                                                             "answerFreeText": "",
                                                             "imzTypeCode": [
                                                                 {
@@ -703,8 +703,8 @@ def covid_monitor():
                                                         {
                                                             "questionId": "12",
                                                             "questionText": "Have you received any vaccines in the past 14 days?",
-                                                            "answerValue": question_values(Questions().question_id_12),
-                                                            "answerText": Questions().question_id_12,
+                                                            "answerValue": question_values(Questions.question_id_12),
+                                                            "answerText": Questions.question_id_12,
                                                             "answerFreeText": "",
                                                             "imzTypeCode": [
                                                                 {
@@ -716,8 +716,8 @@ def covid_monitor():
                                                         {
                                                             "questionId": "13",
                                                             "questionText": "Have you received monoclonal antibodies or convalescent plasma as part of a COVID-19 treatment in the past 90 days?",
-                                                            "answerValue": question_values(Questions().question_id_13),
-                                                            "answerText": Questions().question_id_13,
+                                                            "answerValue": question_values(Questions.question_id_13),
+                                                            "answerText": Questions.question_id_13,
                                                             "answerFreeText": "",
                                                             "imzTypeCode": [
                                                                 {
@@ -739,9 +739,9 @@ def covid_monitor():
                                                                         "refId": "55402"
                                                                     }
                                                                 ],
-                                                                "answerText": Questions().question_id_1,
+                                                                "answerText": Questions.question_id_1,
                                                                 "answerValue": question_values(
-                                                                    Questions().question_id_1)
+                                                                    Questions.question_id_1)
                                                             },
                                                             {
                                                                 "questionId": "8",
@@ -753,9 +753,9 @@ def covid_monitor():
                                                                         "refId": "55416"
                                                                     }
                                                                 ],
-                                                                "answerText": Questions().question_id_8,
+                                                                "answerText": Questions.question_id_8,
                                                                 "answerValue": question_values(
-                                                                    Questions().question_id_8)
+                                                                    Questions.question_id_8)
                                                             },
                                                             {
                                                                 "questionId": "9",
@@ -767,9 +767,9 @@ def covid_monitor():
                                                                         "refId": "55418"
                                                                     }
                                                                 ],
-                                                                "answerText": Questions().question_id_9,
+                                                                "answerText": Questions.question_id_9,
                                                                 "answerValue": question_values(
-                                                                    Questions().question_id_9)
+                                                                    Questions.question_id_9)
                                                             },
                                                             {
                                                                 "questionId": "10",
@@ -781,9 +781,9 @@ def covid_monitor():
                                                                         "refId": "55420"
                                                                     }
                                                                 ],
-                                                                "answerText": Questions().question_id_10,
+                                                                "answerText": Questions.question_id_10,
                                                                 "answerValue": question_values(
-                                                                    Questions().question_id_10)
+                                                                    Questions.question_id_10)
 
                                                             }
                                                         ]
@@ -793,8 +793,8 @@ def covid_monitor():
                                                         {
                                                             "questionId": "2",
                                                             "questionText": "Which group applies?",
-                                                            "answerText": Questions().eligibility,
-                                                            "answerFreeText": Questions().eligibility,
+                                                            "answerText": Questions.eligibility,
+                                                            "answerFreeText": Questions.eligibility,
                                                             "answerValue": "1",
                                                             "imzTypeCode": [
                                                                 {
@@ -849,13 +849,13 @@ def covid_monitor():
                                                     "additionalLegalAnswers": [
                                                         {
                                                             "questionId": "race",
-                                                            "answerValue": Patient().race_value,
-                                                            "answerText": Patient().race
+                                                            "answerValue": Patient.race_value,
+                                                            "answerText": Patient.race
                                                         },
                                                         {
                                                             "questionId": "ethnicity",
-                                                            "answerValue": Patient().ethnicity_value,
-                                                            "answerText": Patient().ethnicity
+                                                            "answerValue": Patient.ethnicity_value,
+                                                            "answerText": Patient.ethnicity
                                                         }
                                                     ],
                                                     "isGuest": "Y",
